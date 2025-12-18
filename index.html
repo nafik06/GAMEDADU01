@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Dadu 3D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1 style="text-align: center;">🎲 Game Dadu 3D</h1>
+
+<div class="container">
+
+    <div id="diceArea" class="dice-area"></div>
+
+    <button id="btnRollAll" class="roll-btn">🎲 LEMPAR DADU</button>
+    <button id="btnReset" class="reset-btn">Reset Skor</button>
+
+    <div id="rankingBox" class="ranking-box hidden">
+        <div class="ranking-title">🏆 Peringkat</div>
+        <div id="rankingList" class="ranking-list"></div>
+    </div>
+    <div id="winnerModal" class="winner-modal hidden">
+    <div class="winner-content">
+        <h2>🏆 Pemenang</h2>
+        <p id="winnerText"></p>
+        <button id="btnOk">
+            OK
+        </button>
+    </div>
+</div>
+
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
