@@ -7,16 +7,27 @@ const rankingBox = document.getElementById("rankingBox");
 const btnRollAll = document.getElementById("btnRollAll");
 const btnReset = document.getElementById("btnReset");
 
-// Tombol OK modal saiki dadi pemicu kanggo nampilake peringkat
+// Tombol OK modal → tampilkan ranking
 btnOk.onclick = () => {
     winnerModal.classList.add("hidden");
     rankingBox.classList.add("show");
     rankingBox.classList.remove("hidden");
 };
 
+// --- Kelas induk umum ---
+class GameEntity {
+    constructor(name) {
+        this.name = name;
+    }
+    getInfo() {
+        return `Entity: ${this.name}`;
+    }
+}
 
-class Dice3D {
+// --- Dice3D mewarisi GameEntity ---
+class Dice3D extends GameEntity {
     constructor(el) {
+        super("Dice3D");
         this.el = el;
         this.value = 1;
         this.rx = 0; this.ry = 0; this.rz = 0;
@@ -52,11 +63,17 @@ class Dice3D {
             6: "rotateX(0deg) rotateY(180deg)"
         }[v];
     }
+
+    // Polymorphism
+    getInfo() {
+        return `Dadu terakhir menunjukkan: ${this.value}`;
+    }
 }
 
-class Player {
+// --- Player mewarisi GameEntity ---
+class Player extends GameEntity {
     constructor(id) {
-        this.name = `Player ${id}`;
+        super(`Player ${id}`);
         this.totalScore = 0;
         this.lastRoll = 0;
         this.dice = null;
@@ -67,19 +84,23 @@ class Player {
         this.lastRoll = val;
         this.totalScore += val;
     }
+
+    // Polymorphism
+    getInfo() {
+        return `${this.name} | Skor: ${this.totalScore}`;
+    }
 }
 
-class Game {
+// --- Game mewarisi GameEntity ---
+class Game extends GameEntity {
     constructor() {
+        super("Game");
         this.players = [];
         this.idCounter = 1;
         this.area = document.getElementById("diceArea");
         
         btnRollAll.onclick = () => this.rollAll();
-        
-        if(btnReset) {
-            btnReset.onclick = () => this.resetGame();
-        }
+        if(btnReset) btnReset.onclick = () => this.resetGame();
 
         this.renderAddButton();
     }
@@ -113,37 +134,45 @@ class Game {
         }).join("");
     }
 
-    addPlayer() {
-        if (this.players.length >= 6) return;
-        const p = new Player(this.idCounter++);
-        const box = document.createElement("div");
-        box.className = "player-box";
-        box.innerHTML = `
-            <input class="name-input" value="${p.name}">
-            <div class="scene"><div class="dice">${this.createDiceHTML()}</div></div>
-            <div class="total-score" style="margin: 10px 0; font-size: 14px; color: #8b949e;">Total: <span class="score-val" style="color: #3fb950; font-weight: bold;">0</span></div>
-            <button class="btnDel">Hapus</button>
-        `;
-
-        box.querySelector("input").oninput = (e) => p.name = e.target.value;
-        box.querySelector(".btnDel").onclick = () => {
-            box.remove();
-            this.players = this.players.filter(pl => pl !== p);
-            this.renderAddButton();
-        };
-
-        p.dice = new Dice3D(box.querySelector(".dice"));
-        p.scoreEl = box.querySelector(".score-val");
-        
-        this.players.push(p);
-        this.area.insertBefore(box, document.querySelector(".add-wrapper"));
-        this.renderAddButton();
+   addPlayer() {
+    if (this.players.length >= 6) {
+        alert("Maksimal 6 pemain!");
+        // setelah alert, hapus ikon tambah
+        const addWrap = document.querySelector(".add-wrapper");
+        if (addWrap) addWrap.remove();
+        return;
     }
+
+    const p = new Player(this.idCounter++);
+    const box = document.createElement("div");
+    box.className = "player-box";
+    box.innerHTML = `
+        <input class="name-input" value="${p.name}">
+        <div class="scene"><div class="dice">${this.createDiceHTML()}</div></div>
+        <div class="total-score" style="margin: 10px 0; font-size: 14px; color: #8b949e;">
+            Total: <span class="score-val" style="color: #3fb950; font-weight: bold;">0</span>
+        </div>
+        <button class="btnDel">Hapus</button>
+    `;
+
+    box.querySelector("input").oninput = (e) => p.name = e.target.value;
+    box.querySelector(".btnDel").onclick = () => {
+        box.remove();
+        this.players = this.players.filter(pl => pl !== p);
+        this.renderAddButton(); // kalau ada yang dihapus, ikon tambah muncul lagi
+    };
+
+    p.dice = new Dice3D(box.querySelector(".dice"));
+    p.scoreEl = box.querySelector(".score-val");
+    
+    this.players.push(p);
+    this.area.insertBefore(box, document.querySelector(".add-wrapper"));
+    this.renderAddButton();
+}
 
     renderAddButton() {
         const existing = document.querySelector(".add-wrapper");
         if (existing) existing.remove();
-        if (this.players.length >= 6) return;
         const wrap = document.createElement("div");
         wrap.className = "add-wrapper";
         wrap.innerHTML = `
@@ -158,7 +187,6 @@ class Game {
     rollAll() {
         if (this.players.length === 0) return alert("Tambah pemain dhisik!");
         
-        // Singidake ranking dhisik sakdurunge ngeroll
         rankingBox.classList.add("hidden");
         document.querySelectorAll(".btnDel").forEach(b => b.classList.add("hidden"));
         if(btnReset) btnReset.classList.add("hidden");
@@ -175,40 +203,37 @@ class Game {
             if(btnReset) btnReset.classList.remove("hidden");
         }, 3200);
     }
+
     showResults() {
-    // 1. Update skor visual
-    this.players.forEach(p => p.scoreEl.textContent = p.totalScore);
+        this.players.forEach(p => p.scoreEl.textContent = p.totalScore);
+        const sorted = [...this.players].sort((a, b) => b.totalScore - a.totalScore);
+        
+        rankingList.innerHTML = sorted.map((p, i) => `
+            <div class="rank-row ${i === 0 ? 'rank-top' : ''}" style="display:flex; justify-content:space-between; padding:8px; border-bottom: 1px solid #30363d;">
+                <span>${p.name}</span>
+                <strong>${p.totalScore} poin</strong>
+            </div>
+        `).join("");
 
-    // 2. Hitung ranking
-    const sorted = [...this.players].sort((a, b) => b.totalScore - a.totalScore);
-    
-    rankingList.innerHTML = sorted.map((p, i) => `
-        <div class="rank-row ${i === 0 ? 'rank-top' : ''}" style="display:flex; justify-content:space-between; padding:8px; border-bottom: 1px solid #30363d;">
-            <span>${p.name}</span>
-            <strong>${p.totalScore} poin</strong>
-        </div>
-    `).join("");
+        const topScore = sorted[0].totalScore;
+        const winners = sorted.filter(p => p.totalScore === topScore);
 
-    const topScore = sorted[0].totalScore;
-    const winners = sorted.filter(p => p.totalScore === topScore);
+        let pesan = "";
+        if (winners.length > 1) {
+            pesan = `SERI!\nSkor ${topScore} oleh ${winners.map(w=>w.name).join(", ")}`;
+        } else {
+            pesan = `PEMENANG!\n${winners[0].name} menang dengan ${topScore} poin!`;
+        }
 
-    // 3. Pesan pengumuman
-    let pesan = "";
-    if (winners.length > 1) {
-        pesan = `SERI!\nSkor ${topScore} oleh ${winners.map(w=>w.name).join(", ")}`;
-    } else {
-        pesan = `PEMENANG!\n${winners[0].name} menang dengan ${topScore} poin!`;
+        // Contoh polymorphism
+        console.log("=== Info semua entitas ===");
+        this.players.forEach(p => console.log(p.getInfo()));
+        console.log(sorted[0].dice.getInfo());
+
+        alert(pesan);
+        rankingBox.classList.add("show");
+        rankingBox.classList.remove("hidden");
     }
-
-    // 4. Pakai alert bawaan browser
-    alert(pesan);
-
-    // 5. Setelah OK ditekan, tampilkan ranking
-    rankingBox.classList.add("show");
-    rankingBox.classList.remove("hidden");
-}
-
-    
 }
 
 new Game();
